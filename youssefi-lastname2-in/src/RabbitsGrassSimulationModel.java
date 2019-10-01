@@ -292,7 +292,8 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     }
 
     public void setGridSize(int gridSize) {
-        this.gridSize = gridSize;
+        if(gridSize > 0)
+            this.gridSize = gridSize;
     }
 
     public int getNumInitRabbits() {
@@ -300,7 +301,8 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     }
 
     public void setNumInitRabbits(int numInitRabbits) {
-        this.numInitRabbits = numInitRabbits;
+        if(numInitRabbits > 0)
+            this.numInitRabbits = numInitRabbits;
     }
 
     public int getNumInitGrass() {
@@ -308,7 +310,8 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     }
 
     public void setNumInitGrass(int numInitGrass) {
-        this.numInitGrass = numInitGrass;
+        if(numInitGrass >= 0)
+            this.numInitGrass = numInitGrass;
     }
 
     public int getGrassGrowthRate() {
@@ -316,7 +319,8 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     }
 
     public void setGrassGrowthRate(int grassGrowthRate) {
-        this.grassGrowthRate = grassGrowthRate;
+        if(grassGrowthRate >= 0)
+            this.grassGrowthRate = grassGrowthRate;
     }
 
     public int getBirthThreshold() {
@@ -324,15 +328,18 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     }
 
     public void setBirthThreshold(int birthThreshold) {
-        this.birthThreshold = birthThreshold;
+        if(birthThreshold >= 0)
+            this.birthThreshold = birthThreshold;
     }
 
     public int getInitialEnergy() {
         return initialEnergy;
     }
 
-    public void setInitialEnergy(int initialEngergy) {
-        this.initialEnergy = initialEngergy;
+    public void setInitialEnergy(int initialEngergy)
+    {
+        if(initialEngergy > 0)
+            this.initialEnergy = initialEngergy;
     }
 
     public int getGrassEnergy() {
@@ -340,7 +347,8 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     }
 
     public void setGrassEnergy(int grassEnergy) {
-        this.grassEnergy = grassEnergy;
+        if(grassEnergy >= 0)
+            this.grassEnergy = grassEnergy;
     }
 
     class rabbitsInSpace implements DataSource, Sequence {
