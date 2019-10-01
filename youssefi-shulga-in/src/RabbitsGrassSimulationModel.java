@@ -49,7 +49,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 
     private ArrayList<Integer> evolution_number_rabbits;
 
-    private OpenSequenceGraph number_of_rabbits;
+    private OpenSequenceGraph graph;
 
 
     public void setup() {
@@ -67,18 +67,19 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
         displaySurf = null;
 
 
-        if (number_of_rabbits != null){
-            number_of_rabbits.dispose();
+        if (graph != null){
+            graph.dispose();
         }
-        number_of_rabbits = null;
+        graph = null;
 
         // Create Displays
         displaySurf = new DisplaySurface(this, "Simulation rabbit grass");
-        number_of_rabbits = new OpenSequenceGraph("Number of rabbits",this);
+        graph = new OpenSequenceGraph("Number of rabbits, grass",this);
+        graph.setAxisTitles("time", "#");
 
         // Register Displays
         registerDisplaySurface("Simulation rabbit grass", displaySurf);
-        this.registerMediaProducer("Plot", number_of_rabbits);
+        this.registerMediaProducer("Plot", graph);
     }
 
 
@@ -102,7 +103,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
         buildDisplay();
 
         displaySurf.display();
-        number_of_rabbits.display();
+        graph.display();
     }
 
     public void buildModel() {
@@ -175,7 +176,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
         class NumberOfRabbitsInSpace extends BasicAction {
             public void execute(){
                 evolution_number_rabbits.add(rabbitList.size());
-                number_of_rabbits.step();
+                graph.step();
                 printStats();
             }
 
@@ -250,7 +251,8 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
         displaySurf.addDisplayable(displayGrass, "Grass");
 
 
-        number_of_rabbits.addSequence("Number of rabbits", new rabbitsInSpace());
+        graph.addSequence("Number of rabbits", new rabbitsInSpace());
+        graph.addSequence("Number of grass", new grassInSpace());
     }
 
     public String[] getInitParam() {
@@ -359,6 +361,17 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 
         public double getSValue() {
             return (double) rabbitList.size();
+        }
+    }
+
+    class grassInSpace implements DataSource, Sequence {
+
+        public Object execute() {
+            return new Double(getSValue());
+        }
+
+        public double getSValue() {
+            return (double) grassList.size();
         }
     }
 }

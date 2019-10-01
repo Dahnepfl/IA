@@ -11,7 +11,5 @@
     <orderEntry type="library" name="repast" level="project" />
     <orderEntry type="library" name="colt" level="project" />
     <orderEntry type="library" name="plot" level="project" />
-    <orderEntry type="library" name="jdom" level="project" />
-    <orderEntry type="library" name="logist" level="project" />
   </component>
 </module>
