@@ -1,6 +1,5 @@
 import uchicago.src.sim.space.Object2DGrid;
 
-import java.util.function.Function;
 
 /**
  * Class that implements the simulation space of the rabbits grass simulation.

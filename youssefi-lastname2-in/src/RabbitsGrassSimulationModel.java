@@ -136,6 +136,9 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
         System.out.println("Running BuildSchedule");
         class RabbitsGrassStep extends BasicAction {
             public void execute() {
+                if(rabbitList.isEmpty()){
+                    stop();
+                }
 
                 SimUtilities.shuffle(rabbitList);
                 for (int i = 0; i < rabbitList.size(); i++) {
