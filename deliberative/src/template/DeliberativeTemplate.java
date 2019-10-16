@@ -1,6 +1,8 @@
 package template;
 
 /* import table */
+
+import logist.plan.Action;
 import logist.simulation.Vehicle;
 import logist.agent.Agent;
 import logist.behavior.DeliberativeBehavior;
@@ -11,8 +13,7 @@ import logist.task.TaskSet;
 import logist.topology.Topology;
 import logist.topology.Topology.City;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.*;
 
 /**
  * An optimal planner for one vehicle.
@@ -20,123 +21,182 @@ import java.util.LinkedList;
 @SuppressWarnings("unused")
 public class DeliberativeTemplate implements DeliberativeBehavior {
 
-	enum Algorithm { BFS, ASTAR }
+    enum Algorithm {BFS, ASTAR}
 
-	/* Environment */
-	Topology topology;
-	TaskDistribution td;
+    /* Environment */
+    Topology topology;
+    TaskDistribution td;
 
-	/* the properties of the agent */
-	Agent agent;
-	int capacity;
+    /* the properties of the agent */
+    Agent agent;
+    int capacity;
 
-	/* the planning class */
-	Algorithm algorithm;
+    /* the planning class */
+    Algorithm algorithm;
 
-	@Override
-	public void setup(Topology topology, TaskDistribution td, Agent agent) {
-		this.topology = topology;
-		this.td = td;
-		this.agent = agent;
+    @Override
+    public void setup(Topology topology, TaskDistribution td, Agent agent) {
+        this.topology = topology;
+        this.td = td;
+        this.agent = agent;
 
-		// initialize the planner
-		int capacity = agent.vehicles().get(0).capacity();
-		String algorithmName = agent.readProperty("algorithm", String.class, "ASTAR");
+        // initialize the planner
+        int capacity = agent.vehicles().get(0).capacity();
+        String algorithmName = agent.readProperty("algorithm", String.class, "ASTAR");
 
-		// Throws IllegalArgumentException if algorithm is unknown
-		algorithm = Algorithm.valueOf(algorithmName.toUpperCase());
-
-
-		// ...
-	}
-
-	@Override
-	public Plan plan(Vehicle vehicle, TaskSet tasks) {
-		Plan plan;
-
-		// Compute the plan with the selected algorithm.
-		switch (algorithm) {
-			case ASTAR:
-				// ...
-				plan = naivePlan(vehicle, tasks);
-				break;
-			case BFS:
-				// ...
-				plan = bfsPlan(vehicle, tasks);
-				break;
-			default:
-				throw new AssertionError("Should not happen.");
-		}
-		return plan;
-	}
-
-	private Plan bfsPlan(Vehicle vehicle, TaskSet tasks) {
-		State initial_node = (new StateBuilder(vehicle.getCurrentCity(), tasks)).build();
-
-		boolean cont = true;
-
-		LinkedList<State> nodes = new LinkedList<>();
-		nodes.add(initial_node);
-
-		ArrayList<State> finalStates = new ArrayList<>();
-
-		do{
-			State first_node = nodes.pop();
-
-			if(isGoalState(first_node)){
-				finalStates.add(first_node);
-			}
+        // Throws IllegalArgumentException if algorithm is unknown
+        algorithm = Algorithm.valueOf(algorithmName.toUpperCase());
 
 
+        // ...
+    }
 
-		} while(!nodes.isEmpty());
+    @Override
+    public Plan plan(Vehicle vehicle, TaskSet tasks) {
+        Plan plan;
 
-		return null;
-	}
+        // Compute the plan with the selected algorithm.s
+        switch (algorithm) {
+            case ASTAR:
+                // ...
+                plan = naivePlan(vehicle, tasks);
+                break;
+            case BFS:
+                // ...
+                plan = bfsPlan(vehicle, tasks);
+                break;
+            default:
+                throw new AssertionError("Should not happen.");
+        }
+        return plan;
+    }
 
-	private boolean isGoalState(State first_node) {
-		for (TaskState taskState : first_node.getTaskState()) {
-			if(taskState.getState() != State.TASK_STATE.FINISHED)
-				return false;
-		}
+    private Plan bfsPlan(Vehicle vehicle, TaskSet tasks) {
+        State initial_node = (new StateBuilder(vehicle.getCurrentCity(), tasks, vehicle.capacity())).build();
 
-		return true;
-	}
+        boolean cont = true;
 
-	private double computeCost(Vehicle vehicle, City city_from, City city_to){
-		return vehicle.costPerKm()*city_from.distanceTo(city_to);
-	}
+        LinkedList<State> nodes = new LinkedList<>();
+        nodes.add(initial_node);
 
-	private Plan naivePlan(Vehicle vehicle, TaskSet tasks) {
-		City current = vehicle.getCurrentCity();
-		Plan plan = new Plan(current);
+        ArrayList<State> finalStates = new ArrayList<>();
 
-		for (Task task : tasks) {
-			// move: current city => pickup location
-			for (City city : current.pathTo(task.pickupCity))
-				plan.appendMove(city);
+        do {
+            State first_node = nodes.removeFirst();
+            if (isGoalState(first_node)) {
+                finalStates.add(first_node);
+            } else {
+                ArrayList<State> new_nodes = first_node.generateTree();
+                new_nodes.forEach(state -> {
+                    int index = nodes.indexOf(state);
+                    if (index < 0) {
+                        nodes.add(state);
+                    } else if (nodes.get(index).getKilometers() > state.getKilometers()) {
+                        nodes.set(index, state);
+                    }
+                });
 
-			plan.appendPickup(task);
+            }
 
-			// move: pickup location => delivery location
-			for (City city : task.path())
-				plan.appendMove(city);
+        } while (!nodes.isEmpty());
 
-			plan.appendDelivery(task);
 
-			// set current city
-			current = task.deliveryCity;
-		}
-		return plan;
-	}
+        State best_state = Collections.min(finalStates, Comparator.comparingDouble(State::getKilometers));
 
-	@Override
-	public void planCancelled(TaskSet carriedTasks) {
+        Plan plan = new Plan(vehicle.getCurrentCity());
 
-		if (!carriedTasks.isEmpty()) {
-			// This cannot happen for this simple agent, but typically
-			// you will need to consider the carriedTasks when the next
-			// plan is computed.
-		}
-	}
+        Stack<State> stack = new Stack<>();
+        State actual_state = best_state;
+
+        while (actual_state != null) {
+            stack.push(actual_state);
+            actual_state = actual_state.getParent();
+        }
+
+
+        State previous_state = null;
+
+        while (!stack.isEmpty()) {
+            State current_state = stack.pop();
+
+            if (previous_state != null) {
+                City city_from = previous_state.getActual_city();
+                City city_to = current_state.getActual_city();
+
+                for (City city :
+                        city_from.pathTo(city_to)) {
+                    plan.appendMove(city);
+                }
+
+                Task task = current_state.computeDifference();
+                if (task == null) {
+                    throw new RuntimeException();
+                }
+                System.out.println(task);
+                System.out.println(current_state.getActual_city());
+
+                if (task.pickupCity.equals(current_state.getActual_city())) {
+                    System.out.println("Pickup " + task.toString());
+                    plan.appendPickup(task);
+                } else if (task.deliveryCity.equals(current_state.getActual_city())) {
+                    System.out.println("Delivery " + task.toString());
+                    plan.appendDelivery(task);
+                } else {
+                    throw new AssertionError();
+                }
+            }
+
+            previous_state = current_state;
+        }
+
+        System.out.println(plan.toString());
+
+        return plan;
+    }
+
+    private boolean isGoalState(State first_node) {
+        for (State.TASK_STATE state : first_node.getTaskState().values()) {
+            if (state != State.TASK_STATE.FINISHED)
+                return false;
+        }
+
+        return true;
+    }
+
+    private double computeCost(Vehicle vehicle, City city_from, City city_to) {
+        return vehicle.costPerKm() * city_from.distanceTo(city_to);
+    }
+
+    private Plan naivePlan(Vehicle vehicle, TaskSet tasks) {
+        City current = vehicle.getCurrentCity();
+        Plan plan = new Plan(current);
+
+        for (Task task : tasks) {
+            // move: current city => pickup location
+            for (City city : current.pathTo(task.pickupCity))
+                plan.appendMove(city);
+
+            plan.appendPickup(task);
+
+            // move: pickup location => delivery location
+            for (City city : task.path())
+                plan.appendMove(city);
+
+            plan.appendDelivery(task);
+
+            // set current city
+            current = task.deliveryCity;
+        }
+        return plan;
+    }
+
+    @Override
+    public void planCancelled(TaskSet carriedTasks) {
+
+        if (!carriedTasks.isEmpty()) {
+            // This cannot happen for this simple agent, but typically
+            // you will need to consider the carriedTasks when the next
+            // plan is computed.
+        }
+    }
 }

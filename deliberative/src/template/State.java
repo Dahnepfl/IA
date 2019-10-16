@@ -1,79 +1,130 @@
 package template;
 
 import logist.task.Task;
-import logist.task.TaskSet;
 import logist.topology.Topology;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class State {
     private final Topology.City actual_city;
-    private final ArrayList<TaskState> task_states;
+    private final Map<Task, TASK_STATE> task_states;
+    private final State parent;
+    private final double kilometers;
+    private final int weight;
+    private final int capacity;
 
-    public State(Topology.City actual_city, ArrayList<TaskState> task_states) {
+    public State(Topology.City actual_city, HashMap<Task, TASK_STATE> task_states, State parent, double kilometers, int weight, int capacity) {
+        assert(actual_city != null);
+        this.weight     = weight;
+        this.parent      = parent;
         this.actual_city = actual_city;
-        this.task_states = (ArrayList<TaskState>) Collections.unmodifiableList(task_states);
+        this.task_states = Collections.unmodifiableMap(task_states);
+        this.kilometers = kilometers;
+        this.capacity   = capacity;
     }
 
     public Topology.City getActual_city() {
         return actual_city;
     }
 
-    public ArrayList<TaskState> getTaskState() {
-        return new ArrayList<>(task_states);
+    public HashMap<Task, TASK_STATE> getTaskState() {
+        return new HashMap<>(task_states);
     }
 
-    public State move_to_city(Topology.City city_dst, boolean pickup, boolean delivery) {
-        if(pickup == delivery){
-            throw new IllegalArgumentException("Pickup and delivery are both true/false !");
+    public State move_to_city(Task task, TASK_STATE state) {
+        HashMap<Task, TASK_STATE> new_states = new HashMap<>(task_states);
+
+        int task_weight = 0;
+
+        Topology.City city_dst = null;
+
+        switch(state){
+            case PENDING:
+                city_dst = task.pickupCity;
+                task_weight = task.weight;
+                new_states.replace(task, TASK_STATE.ACTIVE);
+                break;
+            case ACTIVE:
+                task_weight = -task.weight;
+                city_dst = task.deliveryCity;
+                new_states.replace(task, TASK_STATE.FINISHED);
+                break;
+            default:
+                throw new AssertionError();
         }
 
-        ArrayList<TaskState> new_states = new ArrayList<>(task_states);
-
-        for (int i = 0; i < new_states.size(); i++) {
-            if(pickup){
-                Task task = new_states.get(i).getTask();
-                TASK_STATE state = new_states.get(i).getState();
-
-                if(task.pickupCity == city_dst && state == TASK_STATE.PENDING){
-                    new_states.add(i, new TaskState(task, TASK_STATE.ACTIVE));
-                }
-            }
-
-            if(delivery){
-                Task task = new_states.get(i).getTask();
-                TASK_STATE state = new_states.get(i).getState();
-
-                if(task.deliveryCity == city_dst && state == TASK_STATE.ACTIVE){
-                    new_states.add(i, new TaskState(task, TASK_STATE.FINISHED));
-                }
-            }
+        if(city_dst == null){
+            throw new RuntimeException();
         }
 
 
-        return new State(city_dst, new_states);
+        return new State(city_dst, new_states, this, kilometers + actual_city.distanceTo(city_dst), weight + task_weight, capacity);
     }
 
     public ArrayList<State> generateTree(){
         ArrayList<State> states = new ArrayList<State>();
 
-        this.getTaskState().forEach(taskState -> {
-            Task task = taskState.getTask();
-            TASK_STATE state = taskState.getState();
-
-            switch (state){
-                case PENDING:
-                    states.add(move_to_city(task.pickupCity, true, false));
-                    break;
-                case ACTIVE:
-                    states.add(move_to_city(task.deliveryCity, false, true));
-                    break;
+        this.task_states.forEach((task, state) -> {
+            if(state != TASK_STATE.FINISHED && !(state == TASK_STATE.PENDING && ((weight+task.weight) > capacity))) {
+                states.add(move_to_city(task, state));
             }
-
         });
 
         return states;
+    }
+
+    public State getParent() {
+        return parent;
+    }
+
+    /**
+     * Compute the difference with the parent
+     * @return TaskState the Task and the State that has changed
+     */
+    public Task computeDifference() {
+
+        if (getParent() != null) {
+            HashMap<Task, TASK_STATE> list_parent = getParent().getTaskState();
+            HashMap<Task, TASK_STATE> list_current = this.getTaskState();
+
+            for (Task task : list_current.keySet()) {
+
+                if (list_parent.get(task) != list_current.get(task)) {
+                    return task;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public double getKilometers(){
+        return kilometers;
+    }
+
+    @Override
+    public String toString() {
+        return "State{" +
+                "actual_city=" + actual_city +
+                ", task_states=" + task_states.values().toString() +
+                ", parent=" + (parent != null ? parent.toString() : "null") +
+                ", kilometers=" + kilometers +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        State state = (State) o;
+        return actual_city.equals(state.actual_city) &&
+                task_states.equals(state.task_states);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(actual_city, task_states);
     }
 
     enum TASK_STATE {
