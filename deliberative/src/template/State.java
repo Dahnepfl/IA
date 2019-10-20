@@ -62,7 +62,7 @@ public final class State {
         return new State(city_dst, new_states, this, kilometers + actual_city.distanceTo(city_dst), weight + task_weight, capacity);
     }
 
-    public ArrayList<State> generateTree(){
+    public ArrayList<State> generateChild(){
         ArrayList<State> states = new ArrayList<State>();
 
         this.task_states.forEach((task, state) -> {

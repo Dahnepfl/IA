@@ -2,7 +2,6 @@ package template;
 
 /* import table */
 
-import logist.plan.Action;
 import logist.simulation.Vehicle;
 import logist.agent.Agent;
 import logist.behavior.DeliberativeBehavior;
@@ -21,7 +20,7 @@ import java.util.*;
 @SuppressWarnings("unused")
 public class DeliberativeTemplate implements DeliberativeBehavior {
 
-    enum Algorithm {BFS, ASTAR}
+    enum Algorithm {BFS, ASTAR, NAIVE}
 
     /* Environment */
     Topology topology;
@@ -59,6 +58,10 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
         switch (algorithm) {
             case ASTAR:
                 // ...
+                plan = astarPlan(vehicle, tasks);
+                break;
+            case NAIVE:
+                // ...
                 plan = naivePlan(vehicle, tasks);
                 break;
             case BFS:
@@ -71,6 +74,89 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
         return plan;
     }
 
+    private Plan astarPlan(Vehicle vehicle, TaskSet tasks) {
+        int max_num_nodes = 2000;
+
+        State initial_node = (new StateBuilder(vehicle.getCurrentCity(), tasks, vehicle.capacity())).build();
+
+        boolean cont = true;
+
+        LinkedList<State> nodes = new LinkedList<>();
+        nodes.add(initial_node);
+
+        State best_state = initial_node;
+        double least_kilometers = Double.MAX_VALUE;
+
+        do {
+
+            // Keep only n nodes in memory
+            while(nodes.size() > max_num_nodes){
+                nodes.removeLast();
+            }
+
+            State first_node = nodes.removeFirst();
+
+            if (isGoalState(first_node)) {
+                if(least_kilometers > first_node.getKilometers()) {
+                    best_state = first_node;
+                    least_kilometers = first_node.getKilometers();
+                }
+
+            } else {
+                ArrayList<State> new_nodes = first_node.generateChild();
+
+                new_nodes.forEach(state -> {
+                    int index = nodes.indexOf(state);
+                    if (index < 0) {
+                        nodes.add(state);
+                    } else if (nodes.get(index).getKilometers() > state.getKilometers()) {
+                        nodes.set(index, state);
+                    }
+                });
+                nodes.sort(Comparator.comparingDouble(State::getKilometers));
+            }
+
+        } while (!nodes.isEmpty());
+
+        Plan plan = stateToPlan(best_state, vehicle.getCurrentCity());
+
+        System.out.println(plan.toString());
+
+        return plan;
+    }
+
+    private Plan stateToPlan(State state, City initial_city){
+        Plan plan;
+
+        if(state.getParent() == null){
+            plan = new Plan(initial_city);
+        } else {
+            plan = stateToPlan(state.getParent(), initial_city);
+            City city_from = state.getParent().getActual_city();
+            City city_to = state.getActual_city();
+
+            for (City city :
+                    city_from.pathTo(city_to)) {
+                plan.appendMove(city);
+            }
+
+            Task task = state.computeDifference();
+            if (task == null) {
+                throw new RuntimeException();
+            }
+
+            if (task.pickupCity.equals(state.getActual_city())) {
+                plan.appendPickup(task);
+            } else if (task.deliveryCity.equals(state.getActual_city())) {
+                plan.appendDelivery(task);
+            } else {
+                throw new AssertionError();
+            }
+        }
+
+        return plan;
+    }
+
     private Plan bfsPlan(Vehicle vehicle, TaskSet tasks) {
         State initial_node = (new StateBuilder(vehicle.getCurrentCity(), tasks, vehicle.capacity())).build();
 
@@ -79,14 +165,21 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
         LinkedList<State> nodes = new LinkedList<>();
         nodes.add(initial_node);
 
-        ArrayList<State> finalStates = new ArrayList<>();
+        State best_state = initial_node;
+        double actual_least_kilometers = Double.MAX_VALUE;
 
         do {
             State first_node = nodes.removeFirst();
+
             if (isGoalState(first_node)) {
-                finalStates.add(first_node);
+                if(actual_least_kilometers > first_node.getKilometers()) {
+                    best_state = first_node;
+                    actual_least_kilometers = first_node.getKilometers();
+                }
+
             } else {
-                ArrayList<State> new_nodes = first_node.generateTree();
+                ArrayList<State> new_nodes = first_node.generateChild();
+
                 new_nodes.forEach(state -> {
                     int index = nodes.indexOf(state);
                     if (index < 0) {
@@ -100,54 +193,7 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
 
         } while (!nodes.isEmpty());
 
-
-        State best_state = Collections.min(finalStates, Comparator.comparingDouble(State::getKilometers));
-
-        Plan plan = new Plan(vehicle.getCurrentCity());
-
-        Stack<State> stack = new Stack<>();
-        State actual_state = best_state;
-
-        while (actual_state != null) {
-            stack.push(actual_state);
-            actual_state = actual_state.getParent();
-        }
-
-
-        State previous_state = null;
-
-        while (!stack.isEmpty()) {
-            State current_state = stack.pop();
-
-            if (previous_state != null) {
-                City city_from = previous_state.getActual_city();
-                City city_to = current_state.getActual_city();
-
-                for (City city :
-                        city_from.pathTo(city_to)) {
-                    plan.appendMove(city);
-                }
-
-                Task task = current_state.computeDifference();
-                if (task == null) {
-                    throw new RuntimeException();
-                }
-                System.out.println(task);
-                System.out.println(current_state.getActual_city());
-
-                if (task.pickupCity.equals(current_state.getActual_city())) {
-                    System.out.println("Pickup " + task.toString());
-                    plan.appendPickup(task);
-                } else if (task.deliveryCity.equals(current_state.getActual_city())) {
-                    System.out.println("Delivery " + task.toString());
-                    plan.appendDelivery(task);
-                } else {
-                    throw new AssertionError();
-                }
-            }
-
-            previous_state = current_state;
-        }
+        Plan plan = stateToPlan(best_state, vehicle.getCurrentCity());
 
         System.out.println(plan.toString());
 
