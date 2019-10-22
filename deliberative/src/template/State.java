@@ -125,6 +125,7 @@ public final class State {
 
         this.estimated_cost = estimated_cost_between.get();
 
+
         return kilometers + this.estimated_cost;
     }
 

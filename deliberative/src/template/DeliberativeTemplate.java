@@ -14,6 +14,8 @@ import logist.topology.Topology.City;
 
 import java.util.*;
 
+import static java.util.Comparator.comparingDouble;
+
 /**
  * An optimal planner for one vehicle.
  */
@@ -99,18 +101,19 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
         nodes.add(initial_node);
 
         State best_state = initial_node;
-        double least_kilometers = Double.MAX_VALUE;
 
+        State node_min = initial_node;
 
-
+        int i = 0;
         do {
-            State first_node = nodes.removeFirst();
+            i++;
+       //     State first_node = nodes.removeFirst();
+            State first_node = node_min;
+            nodes.remove(node_min);
 
             if (isGoalState(first_node)) {
-                if(least_kilometers > first_node.getKilometers()) {
-                    best_state = first_node;
-                    break;
-                }
+                best_state = first_node;
+                break;
             } else {
                 ArrayList<State> new_nodes = first_node.generateChild();
 
@@ -122,10 +125,13 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
                         nodes.set(index, state);
                     }
                 });
-                nodes.sort(Comparator.comparingDouble(State::getKilometersAstar));
+                //nodes.sort(comparingDouble(State::getKilometersAstar));
+                node_min = Collections.min(nodes, comparingDouble(State::getKilometersAstar));
             }
 
         } while (!nodes.isEmpty());
+
+        System.out.println(i + " iterations");
 
         Plan plan = stateToPlan(best_state, vehicle.getCurrentCity());
 
@@ -191,7 +197,9 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
         State best_state = initial_node;
         double actual_least_kilometers = Double.MAX_VALUE;
 
+        int i = 0;
         do {
+            i++;
             State first_node = nodes.removeFirst();
 
             if (isGoalState(first_node)) {
@@ -215,6 +223,8 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
             }
 
         } while (!nodes.isEmpty());
+
+        System.out.println(i + " iterations");
 
         Plan plan = stateToPlan(best_state, vehicle.getCurrentCity());
 
