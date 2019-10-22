@@ -176,7 +176,6 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
     }
 
     private Plan bfsPlan(Vehicle vehicle, TaskSet tasks) {
-        System.out.println("RECOMPUTE");
         State initial_node;
         if (this.carriedTasks == null || this.carriedTasks.isEmpty()) {
             initial_node = (new StateBuilder(vehicle.getCurrentCity(), vehicle.capacity())).build(tasks);
