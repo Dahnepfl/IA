@@ -112,7 +112,7 @@ public final class State {
         AtomicReference<Double> estimated_cost_between = new AtomicReference<>(0.0);
 
         task_states.forEach((task, task_state) -> {
-            double dist = Double.MIN_VALUE;
+            double dist = -1;
             if(task_state == TASK_STATE.PENDING){
                 dist = actual_city.distanceTo(task.pickupCity) + task.pickupCity.distanceTo(task.deliveryCity);
             } else if (task_state == TASK_STATE.ACTIVE){
