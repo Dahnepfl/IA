@@ -1,11 +1,10 @@
 package template;
 
 import logist.task.Task;
-import logist.task.TaskSet;
 import logist.topology.Topology;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class State {
     private final Topology.City actual_city;
@@ -14,6 +13,7 @@ public final class State {
     private final double kilometers;
     private final int weight;
     private final int capacity;
+    private double estimated_cost;
 
     public State(Topology.City actual_city, HashMap<Task, TASK_STATE> task_states, State parent, double kilometers, int weight, int capacity) {
         assert(actual_city != null);
@@ -23,6 +23,7 @@ public final class State {
         this.task_states = Collections.unmodifiableMap(task_states);
         this.kilometers = kilometers;
         this.capacity   = capacity;
+        this.estimated_cost = Double.MIN_VALUE;
     }
 
     public Topology.City getActual_city() {
@@ -102,6 +103,29 @@ public final class State {
 
     public double getKilometers(){
         return kilometers;
+    }
+    public double getKilometersAstar(){
+        if(this.estimated_cost >= 0){
+            return kilometers + this.estimated_cost;
+        }
+
+        AtomicReference<Double> estimated_cost_between = new AtomicReference<>(0.0);
+
+        task_states.forEach((task, task_state) -> {
+            double dist = Double.MIN_VALUE;
+            if(task_state == TASK_STATE.PENDING){
+                dist = actual_city.distanceTo(task.pickupCity) + task.pickupCity.distanceTo(task.deliveryCity);
+            } else if (task_state == TASK_STATE.ACTIVE){
+                dist = actual_city.distanceTo(task.deliveryCity);
+            }
+            if(dist > estimated_cost_between.get()){
+                estimated_cost_between.set(dist);
+            }
+        });
+
+        this.estimated_cost = estimated_cost_between.get();
+
+        return kilometers + this.estimated_cost;
     }
 
     @Override

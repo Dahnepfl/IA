@@ -77,8 +77,6 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
     }
 
     private Plan astarPlan(Vehicle vehicle, TaskSet tasks) {
-        int max_num_nodes = 2000;
-
         // State depends on actually carried tasks
         State initial_node;
         if (this.carriedTasks == null || this.carriedTasks.isEmpty()) {
@@ -106,18 +104,12 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
 
 
         do {
-
-            // Keep only n nodes in memory
-            while(nodes.size() > max_num_nodes){
-                nodes.removeLast();
-            }
-
             State first_node = nodes.removeFirst();
 
             if (isGoalState(first_node)) {
                 if(least_kilometers > first_node.getKilometers()) {
                     best_state = first_node;
-                    least_kilometers = first_node.getKilometers();
+                    break;
                 }
 
             } else {
@@ -131,7 +123,7 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
                         nodes.set(index, state);
                     }
                 });
-                nodes.sort(Comparator.comparingDouble(State::getKilometers));
+                nodes.sort(Comparator.comparingDouble(State::getKilometersAstar));
             }
 
         } while (!nodes.isEmpty());
@@ -139,6 +131,7 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
         Plan plan = stateToPlan(best_state, vehicle.getCurrentCity());
 
         System.out.println(plan.toString());
+        System.out.println(best_state.getKilometers()*vehicle.costPerKm());
 
         return plan;
     }
