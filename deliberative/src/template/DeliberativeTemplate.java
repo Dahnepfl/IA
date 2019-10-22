@@ -77,6 +77,8 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
     }
 
     private Plan astarPlan(Vehicle vehicle, TaskSet tasks) {
+        int number_of_node_max = tasks.size()*1000;
+
         // State depends on actually carried tasks
         State initial_node;
         if (this.carriedTasks == null || this.carriedTasks.isEmpty()) {
@@ -103,6 +105,10 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
         int i = 0;
         do {
             i++;
+            nodes.sort(Comparator.comparingDouble(State::getKilometersAstar));
+            while(nodes.size() > number_of_node_max){
+                nodes.removeLast();
+            }
             State first_node = nodes.removeFirst();
 
             if (isGoalState(first_node)) {
@@ -119,7 +125,7 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
                         nodes.set(index, state);
                     }
                 });
-                nodes.sort(Comparator.comparingDouble(State::getKilometersAstar));
+
             }
 
         } while (!nodes.isEmpty());

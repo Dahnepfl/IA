@@ -23,7 +23,7 @@ public final class State {
         this.task_states = Collections.unmodifiableMap(task_states);
         this.kilometers = kilometers;
         this.capacity   = capacity;
-        this.estimated_cost = -1;
+        this.estimated_cost = -1.0;
     }
 
     public Topology.City getActual_city() {
@@ -106,27 +106,27 @@ public final class State {
     }
     public double getKilometersAstar(){
         if(this.estimated_cost >= 0.0) {
-            return kilometers + this.estimated_cost;
+            return (this.kilometers + this.estimated_cost);
         }
 
-        AtomicReference<Double> estimated_cost_between = new AtomicReference<>(0.0);
+        List<Double> costs = new ArrayList<>();
 
         task_states.forEach((task, task_state) -> {
-            double dist = -1;
+            Double dist;
             if(task_state == TASK_STATE.PENDING){
                 dist = actual_city.distanceTo(task.pickupCity) + task.pickupCity.distanceTo(task.deliveryCity);
+                costs.add(dist);
             } else if (task_state == TASK_STATE.ACTIVE){
                 dist = actual_city.distanceTo(task.deliveryCity);
-            }
-            if(dist > estimated_cost_between.get()){
-                estimated_cost_between.set(dist);
+                costs.add(dist);
+            } else {
+                costs.add(0.0);
             }
         });
 
-        this.estimated_cost = estimated_cost_between.get();
+        this.estimated_cost = Collections.max(costs);
 
-
-        return kilometers + this.estimated_cost;
+        return (this.kilometers + this.estimated_cost);
     }
 
     @Override
