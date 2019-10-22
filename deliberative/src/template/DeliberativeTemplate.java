@@ -77,7 +77,7 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
     }
 
     private Plan astarPlan(Vehicle vehicle, TaskSet tasks) {
-        int number_of_node_max = tasks.size()*1000;
+        int number_of_node_max = 9000;
 
         // State depends on actually carried tasks
         State initial_node;
