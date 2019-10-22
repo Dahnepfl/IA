@@ -23,7 +23,7 @@ public final class State {
         this.task_states = Collections.unmodifiableMap(task_states);
         this.kilometers = kilometers;
         this.capacity   = capacity;
-        this.estimated_cost = Double.MIN_VALUE;
+        this.estimated_cost = -1;
     }
 
     public Topology.City getActual_city() {
@@ -105,7 +105,7 @@ public final class State {
         return kilometers;
     }
     public double getKilometersAstar(){
-        if(this.estimated_cost >= 0){
+        if(this.estimated_cost >= 0.0) {
             return kilometers + this.estimated_cost;
         }
 

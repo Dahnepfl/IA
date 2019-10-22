@@ -111,7 +111,6 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
                     best_state = first_node;
                     break;
                 }
-
             } else {
                 ArrayList<State> new_nodes = first_node.generateChild();
 
