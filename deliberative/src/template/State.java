@@ -1,6 +1,7 @@
 package template;
 
 import logist.task.Task;
+import logist.task.TaskSet;
 import logist.topology.Topology;
 
 import java.util.*;

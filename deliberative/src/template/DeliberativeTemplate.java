@@ -20,6 +20,8 @@ import java.util.*;
 @SuppressWarnings("unused")
 public class DeliberativeTemplate implements DeliberativeBehavior {
 
+    private TaskSet carriedTasks;
+
     enum Algorithm {BFS, ASTAR, NAIVE}
 
     /* Environment */
@@ -77,7 +79,21 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
     private Plan astarPlan(Vehicle vehicle, TaskSet tasks) {
         int max_num_nodes = 2000;
 
-        State initial_node = (new StateBuilder(vehicle.getCurrentCity(), tasks, vehicle.capacity())).build();
+        // State depends on actually carried tasks
+        State initial_node;
+        if (this.carriedTasks == null || this.carriedTasks.isEmpty()) {
+            initial_node = (new StateBuilder(vehicle.getCurrentCity(), vehicle.capacity())).build(tasks);
+        } else {
+            HashMap<Task, State.TASK_STATE> task_state = new HashMap<>();
+            tasks.forEach(task -> {
+                        task_state.put(task, State.TASK_STATE.PENDING);
+                    }
+            );
+            this.carriedTasks.forEach(task -> {
+                task_state.put(task, State.TASK_STATE.ACTIVE);
+            });
+            initial_node = (new StateBuilder(vehicle.getCurrentCity(), vehicle.capacity())).build(task_state);
+        }
 
         boolean cont = true;
 
@@ -86,6 +102,8 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
 
         State best_state = initial_node;
         double least_kilometers = Double.MAX_VALUE;
+
+
 
         do {
 
@@ -158,7 +176,21 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
     }
 
     private Plan bfsPlan(Vehicle vehicle, TaskSet tasks) {
-        State initial_node = (new StateBuilder(vehicle.getCurrentCity(), tasks, vehicle.capacity())).build();
+        System.out.println("RECOMPUTE");
+        State initial_node;
+        if (this.carriedTasks == null || this.carriedTasks.isEmpty()) {
+            initial_node = (new StateBuilder(vehicle.getCurrentCity(), vehicle.capacity())).build(tasks);
+        } else {
+            HashMap<Task, State.TASK_STATE> task_state = new HashMap<>();
+            tasks.forEach(task -> {
+                        task_state.put(task, State.TASK_STATE.PENDING);
+                    }
+            );
+            this.carriedTasks.forEach(task -> {
+                task_state.put(task, State.TASK_STATE.ACTIVE);
+            });
+            initial_node = (new StateBuilder(vehicle.getCurrentCity(), vehicle.capacity())).build(task_state);
+        }
 
         boolean cont = true;
 
@@ -238,11 +270,13 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
 
     @Override
     public void planCancelled(TaskSet carriedTasks) {
-
+        System.out.println("herE");
         if (!carriedTasks.isEmpty()) {
+            this.carriedTasks = carriedTasks;
             // This cannot happen for this simple agent, but typically
             // you will need to consider the carriedTasks when the next
             // plan is computed.
+
         }
     }
 }
