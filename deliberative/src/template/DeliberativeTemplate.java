@@ -14,8 +14,6 @@ import logist.topology.Topology.City;
 
 import java.util.*;
 
-import static java.util.Comparator.comparingDouble;
-
 /**
  * An optimal planner for one vehicle.
  */
@@ -102,14 +100,10 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
 
         State best_state = initial_node;
 
-        State node_min = initial_node;
-
         int i = 0;
         do {
             i++;
-       //     State first_node = nodes.removeFirst();
-            State first_node = node_min;
-            nodes.remove(node_min);
+            State first_node = nodes.removeFirst();
 
             if (isGoalState(first_node)) {
                 best_state = first_node;
@@ -125,8 +119,7 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
                         nodes.set(index, state);
                     }
                 });
-                //nodes.sort(comparingDouble(State::getKilometersAstar));
-                node_min = Collections.min(nodes, comparingDouble(State::getKilometersAstar));
+                nodes.sort(Comparator.comparingDouble(State::getKilometersAstar));
             }
 
         } while (!nodes.isEmpty());
