@@ -2,13 +2,10 @@ package template;
 
 //the list of imports
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
+
 import logist.LogistSettings;
 
-import logist.Measures;
-import logist.behavior.AuctionBehavior;
 import logist.behavior.CentralizedBehavior;
 import logist.agent.Agent;
 import logist.config.Parsers;
@@ -33,7 +30,54 @@ public class CentralizedTemplate implements CentralizedBehavior {
     private Agent agent;
     private long timeout_setup;
     private long timeout_plan;
-    
+    private double p;
+
+
+    private template.Assignment SelectInitialSolution(TaskSet tasks, List<Vehicle> vehicles){
+        if(tasks == null || vehicles == null || tasks.isEmpty() || vehicles.isEmpty()){
+            throw new IllegalArgumentException();
+        }
+        Vehicle v = vehicles.get(0);
+        for (Vehicle vehicle :
+                vehicles) {
+            if(vehicle.capacity() > v.capacity())
+                v = vehicle;
+        }
+
+        HashMap<Task, Task> nextTask = new HashMap<>();
+        HashMap<Vehicle, Task> nextTaskVehicle = new HashMap<>();
+        HashMap<Task, Integer> time = new HashMap<>();
+        HashMap<Task, Vehicle> vehicle = new HashMap<>();
+
+        ArrayList<Task> task_list = new ArrayList<>(tasks);
+
+        for(int i = 0; i < task_list.size(); i++) {
+            if(task_list.get(i).weight > v.capacity()){
+                throw new RuntimeException("Unsolvable");
+            }
+
+            if(i == task_list.size() - 1){
+                nextTask.put(task_list.get(i), null);
+            } else {
+                nextTask.put(task_list.get(i), task_list.get(i + 1));
+            }
+
+            time.put(task_list.get(i), i);
+            vehicle.put(task_list.get(i), v);
+        }
+
+        for (Vehicle vehicle1 :
+                vehicles) {
+            if (vehicle1.equals(v)) {
+                nextTaskVehicle.put(vehicle1, task_list.get(0));
+            } else {
+                nextTaskVehicle.put(vehicle1, null);
+            }
+        }
+
+        return new template.Assignment(nextTask, nextTaskVehicle, time, vehicle);
+    }
+
     @Override
     public void setup(Topology topology, TaskDistribution distribution,
             Agent agent) {
@@ -52,7 +96,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
         timeout_setup = ls.get(LogistSettings.TimeoutKey.SETUP);
         // the plan method cannot execute more than timeout_plan milliseconds
         timeout_plan = ls.get(LogistSettings.TimeoutKey.PLAN);
-        
+
+        this.p = 0.3;
         this.topology = topology;
         this.distribution = distribution;
         this.agent = agent;
@@ -63,7 +108,9 @@ public class CentralizedTemplate implements CentralizedBehavior {
         long time_start = System.currentTimeMillis();
         
 //		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
-        Plan planVehicle1 = newPlan(vehicles.get(0), tasks);
+
+        Plan planVehicle1 = naivePlan(vehicles.get(0), tasks);
+        findAssignment(vehicles, tasks);
 
         List<Plan> plans = new ArrayList<Plan>();
         plans.add(planVehicle1);
@@ -78,29 +125,47 @@ public class CentralizedTemplate implements CentralizedBehavior {
         return plans;
     }
 
-    private Plan newPlan(Vehicle vehicle, TaskSet tasks) {
-        City current = vehicle.getCurrentCity();
-        Plan plan = new Plan(current);
+    private template.Assignment findAssignment(List<Vehicle> vehicles, TaskSet tasks) {
+        template.Assignment Aold = SelectInitialSolution(tasks, vehicles);
 
-        for (Task task : tasks) {
-            // move: current city => pickup location
-            for (City city : current.pathTo(task.pickupCity)) {
-                plan.appendMove(city);
+        int i = 10000;
+        template.Assignment best = Aold;
+        while(i-- > 0){
+            List<template.Assignment> assignments = Aold.chooseNeighbours(vehicles, tasks);
+
+            template.Assignment A = LocalChoice(assignments);
+            if(Math.random() > this.p){
+                Aold = assignments.get((int) Math.floor(Math.random()*assignments.size()));
             }
 
-            plan.appendPickup(task);
-
-            // move: pickup location => delivery location
-            for (City city : task.path()) {
-                plan.appendMove(city);
+            if(A.total_cost() < best.total_cost())
+            {
+                best = A;
             }
 
-            plan.appendDelivery(task);
-
-            // set current city
-            current = task.deliveryCity;
+            System.out.println(assignments.size() + " " + A.total_cost() + " Best : " + best.total_cost());
         }
-        return plan;
+
+        return best;
+    }
+
+    private template.Assignment LocalChoice(List<template.Assignment> assignments) {
+        if(assignments == null || assignments.isEmpty()){
+            throw new IllegalArgumentException();
+        }
+        assignments.sort(Comparator.comparingDouble(template.Assignment::total_cost));
+
+        int index = 1;
+        template.Assignment best = assignments.get(0);
+        for (template.Assignment a :
+                assignments) {
+            if(a.total_cost() <= best.total_cost())
+                index++;
+            else
+                break;
+        }
+
+        return assignments.get((int) Math.floor(Math.random()*index));
     }
 
     private Plan naivePlan(Vehicle vehicle, TaskSet tasks) {
