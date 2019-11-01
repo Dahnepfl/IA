@@ -44,32 +44,41 @@ public class CentralizedTemplate implements CentralizedBehavior {
                 v = vehicle;
         }
 
-        HashMap<Task, Task> nextTask = new HashMap<>();
-        HashMap<Vehicle, Task> nextTaskVehicle = new HashMap<>();
-        HashMap<Task, Integer> time = new HashMap<>();
-        HashMap<Task, Vehicle> vehicle = new HashMap<>();
+        HashMap<template.TaskState, template.TaskState> nextTask = new HashMap<>();
+        HashMap<Vehicle, template.TaskState> nextTaskVehicle = new HashMap<>();
+        HashMap<template.TaskState, Integer> time = new HashMap<>();
+        HashMap<template.TaskState, Vehicle> vehicle = new HashMap<>();
 
         ArrayList<Task> task_list = new ArrayList<>(tasks);
 
+        Collections.shuffle(task_list);
+
+        int j = 0;
         for(int i = 0; i < task_list.size(); i++) {
             if(task_list.get(i).weight > v.capacity()){
                 throw new RuntimeException("Unsolvable");
             }
 
             if(i == task_list.size() - 1){
-                nextTask.put(task_list.get(i), null);
+                nextTask.put(new TaskState(STATE.PICKUP, task_list.get(i)), new TaskState(STATE.DELIVER, task_list.get(i)));
+                nextTask.put(new TaskState(STATE.DELIVER, task_list.get(i)), null);
             } else {
-                nextTask.put(task_list.get(i), task_list.get(i + 1));
+                nextTask.put(new TaskState(STATE.PICKUP, task_list.get(i)), new TaskState(STATE.DELIVER, task_list.get(i)));
+                nextTask.put(new TaskState(STATE.DELIVER, task_list.get(i)), new TaskState(STATE.PICKUP, task_list.get(i+1)));
             }
 
-            time.put(task_list.get(i), i);
-            vehicle.put(task_list.get(i), v);
+            time.put(new TaskState(STATE.PICKUP, task_list.get(i)), j);
+            j++;
+            time.put(new TaskState(STATE.DELIVER, task_list.get(i)), j);
+            j++;
+            vehicle.put(new TaskState(STATE.PICKUP, task_list.get(i)), v);
+            vehicle.put(new TaskState(STATE.DELIVER, task_list.get(i)), v);
         }
 
         for (Vehicle vehicle1 :
                 vehicles) {
             if (vehicle1.equals(v)) {
-                nextTaskVehicle.put(vehicle1, task_list.get(0));
+                nextTaskVehicle.put(vehicle1, new TaskState(STATE.PICKUP, task_list.get(0)));
             } else {
                 nextTaskVehicle.put(vehicle1, null);
             }
@@ -136,6 +145,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
             template.Assignment A = LocalChoice(assignments);
             if(Math.random() > this.p){
                 Aold = assignments.get((int) Math.floor(Math.random()*assignments.size()));
+            } else {
+                Aold = A;
             }
 
             if(A.total_cost() < best.total_cost())
@@ -143,7 +154,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
                 best = A;
             }
 
-            System.out.println(assignments.size() + " " + A.total_cost() + " Best : " + best.total_cost());
+            System.out.println(i + " " + A.total_cost() + " Best : " + best.total_cost());
         }
 
         return best;
@@ -155,11 +166,11 @@ public class CentralizedTemplate implements CentralizedBehavior {
         }
         assignments.sort(Comparator.comparingDouble(template.Assignment::total_cost));
 
-        int index = 1;
+        int index = 0;
         template.Assignment best = assignments.get(0);
         for (template.Assignment a :
                 assignments) {
-            if(a.total_cost() <= best.total_cost())
+            if(a.total_cost() <= (best.total_cost() + 1))
                 index++;
             else
                 break;
