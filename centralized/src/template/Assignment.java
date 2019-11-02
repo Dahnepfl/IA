@@ -51,6 +51,10 @@ public class Assignment {
             }
         }
 
+        if(Math.random() < 0.1){
+            return assignments;
+        }
+
         int length = 0;
         TaskState t = nextTaskVehicle.get(random_vehicle);
 
@@ -179,6 +183,24 @@ public class Assignment {
         }
 
         UpdateTime(time_new, nextTask_new, nextTaskVehicle_new, vehicle);
+
+
+        TaskState t = nextTaskVehicle_new.get(vehicle);
+        int weight = t.getTask().weight;
+        while(nextTask_new.get(t) != null){
+            t = nextTask_new.get(t);
+            if (t.getState() == STATE.PICKUP) {
+                weight += t.getTask().weight;
+            } else {
+                weight -= t.getTask().weight;
+            }
+            if(weight > vehicle.capacity())
+            {
+                return null;
+            }
+        }
+
+
 
         return new Assignment(nextTask_new, nextTaskVehicle_new, time_new, vehicle_new);
     }
@@ -330,4 +352,19 @@ public class Assignment {
         return sum;
     }
 
+    public HashMap<TaskState, TaskState> getNextTask() {
+        return nextTask;
+    }
+
+    public HashMap<Vehicle, TaskState> getNextTaskVehicle() {
+        return nextTaskVehicle;
+    }
+
+    public HashMap<TaskState, Integer> getTime() {
+        return time;
+    }
+
+    public HashMap<TaskState, Vehicle> getVehicle() {
+        return vehicle;
+    }
 }

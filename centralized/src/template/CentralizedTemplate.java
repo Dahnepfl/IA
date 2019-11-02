@@ -37,12 +37,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
         if(tasks == null || vehicles == null || tasks.isEmpty() || vehicles.isEmpty()){
             throw new IllegalArgumentException();
         }
-        Vehicle v = vehicles.get(0);
-        for (Vehicle vehicle :
-                vehicles) {
-            if(vehicle.capacity() > v.capacity())
-                v = vehicle;
-        }
 
         HashMap<template.TaskState, template.TaskState> nextTask = new HashMap<>();
         HashMap<Vehicle, template.TaskState> nextTaskVehicle = new HashMap<>();
@@ -53,19 +47,36 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
         Collections.shuffle(task_list);
 
+        ArrayList<TaskState> vehicules_last_task = new ArrayList<>();
+        vehicles.forEach(vehicle1 -> vehicules_last_task.add(null));
+
         int j = 0;
         for(int i = 0; i < task_list.size(); i++) {
+            int index_ve = (int) Math.floor(Math.random()*vehicles.size());
+            Vehicle v = vehicles.get(index_ve);
+
+            System.out.println("Add to v " + index_ve);
+
+            if(task_list.get(i).weight > v.capacity()) {
+                for (Vehicle vv :
+                        vehicles) {
+                    if (vv.capacity() > v.capacity())
+                        v = vv;
+                }
+            }
+
             if(task_list.get(i).weight > v.capacity()){
                 throw new RuntimeException("Unsolvable");
             }
 
-            if(i == task_list.size() - 1){
-                nextTask.put(new TaskState(STATE.PICKUP, task_list.get(i)), new TaskState(STATE.DELIVER, task_list.get(i)));
-                nextTask.put(new TaskState(STATE.DELIVER, task_list.get(i)), null);
+            if(vehicules_last_task.get(index_ve) == null){
+                nextTaskVehicle.put(vehicles.get(index_ve), new TaskState(STATE.PICKUP, task_list.get(i)));
             } else {
-                nextTask.put(new TaskState(STATE.PICKUP, task_list.get(i)), new TaskState(STATE.DELIVER, task_list.get(i)));
-                nextTask.put(new TaskState(STATE.DELIVER, task_list.get(i)), new TaskState(STATE.PICKUP, task_list.get(i+1)));
+                nextTask.put(vehicules_last_task.get(index_ve), new TaskState(STATE.PICKUP, task_list.get(i)));
             }
+            vehicules_last_task.set(index_ve, new TaskState(STATE.DELIVER, task_list.get(i)));
+            nextTask.put(new TaskState(STATE.PICKUP, task_list.get(i)), new TaskState(STATE.DELIVER, task_list.get(i)));
+
 
             time.put(new TaskState(STATE.PICKUP, task_list.get(i)), j);
             j++;
@@ -75,12 +86,14 @@ public class CentralizedTemplate implements CentralizedBehavior {
             vehicle.put(new TaskState(STATE.DELIVER, task_list.get(i)), v);
         }
 
-        for (Vehicle vehicle1 :
-                vehicles) {
-            if (vehicle1.equals(v)) {
-                nextTaskVehicle.put(vehicle1, new TaskState(STATE.PICKUP, task_list.get(0)));
-            } else {
-                nextTaskVehicle.put(vehicle1, null);
+        vehicules_last_task.forEach(taskState ->
+        {
+            nextTask.put(taskState, null);
+        });
+
+        for(int i = 0; i < vehicles.size(); i++){
+            if(vehicules_last_task.get(i) == null){
+                nextTaskVehicle.put(vehicles.get(i), null);
             }
         }
 
@@ -118,30 +131,81 @@ public class CentralizedTemplate implements CentralizedBehavior {
         
 //		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
 
-        Plan planVehicle1 = naivePlan(vehicles.get(0), tasks);
-        findAssignment(vehicles, tasks);
+        Assignment a = findAssignment(vehicles, tasks);
+        List<Plan> plan = assignmentToPlan(a, vehicles);
 
-        List<Plan> plans = new ArrayList<Plan>();
-        plans.add(planVehicle1);
-        while (plans.size() < vehicles.size()) {
-            plans.add(Plan.EMPTY);
+
+        while (plan.size() < vehicles.size()) {
+            plan.add(Plan.EMPTY);
         }
-        
+
         long time_end = System.currentTimeMillis();
         long duration = time_end - time_start;
         System.out.println("The plan was generated in " + duration + " milliseconds.");
+
+        System.out.println(plan);
         
+        return plan;
+    }
+
+    private List<Plan> assignmentToPlan(Assignment a, List<Vehicle> vvv) {
+        HashMap<TaskState, Vehicle> vehicles = a.getVehicle();
+        HashMap<TaskState, TaskState> next_tasks = a.getNextTask();
+        HashMap<Vehicle, TaskState> next_tasks_v = a.getNextTaskVehicle();
+        HashMap<TaskState, Integer> time = a.getTime();
+
+
+        List<Plan> plans = new ArrayList<>();
+
+        for(int i = 0; i < vvv.size(); i++){
+            Vehicle vehicle = vvv.get(i);
+            TaskState taskState = next_tasks_v.get(vehicle);
+
+            Plan plan = new Plan(vehicle.getCurrentCity());
+
+
+            if(taskState != null) {
+                if(taskState.getState() != STATE.PICKUP){
+                    throw new IllegalStateException();
+                }
+                moveTo(plan, vehicle.getCurrentCity(), taskState.getTask().pickupCity);
+                City last_city = taskState.getTask().pickupCity;
+                plan.appendPickup(taskState.getTask());
+                TaskState t = taskState;
+                while(next_tasks.get(t) != null){
+                    t = next_tasks.get(t);
+                    if (t.getState() == STATE.PICKUP) {
+                        moveTo(plan, last_city, t.getTask().pickupCity);
+                        last_city = t.getTask().pickupCity;
+                        plan.appendPickup(t.getTask());
+                    } else {
+                        moveTo(plan, last_city, t.getTask().deliveryCity);
+                        last_city = t.getTask().deliveryCity;
+                        plan.appendDelivery(t.getTask());
+                    }
+                }
+            }
+            System.out.println(plan.toString());
+            plans.add(i, plan);
+        }
+
         return plans;
+    }
+
+    private void moveTo(Plan plan, City c1, City c2){
+        List<City> cities = c1.pathTo(c2);
+        for (City city : cities) {
+            plan.appendMove(city);
+        }
     }
 
     private template.Assignment findAssignment(List<Vehicle> vehicles, TaskSet tasks) {
         template.Assignment Aold = SelectInitialSolution(tasks, vehicles);
 
-        int i = 10000;
+        int i = 1000;
         template.Assignment best = Aold;
         while(i-- > 0){
             List<template.Assignment> assignments = Aold.chooseNeighbours(vehicles, tasks);
-
             template.Assignment A = LocalChoice(assignments);
             if(Math.random() > this.p){
                 Aold = assignments.get((int) Math.floor(Math.random()*assignments.size()));
