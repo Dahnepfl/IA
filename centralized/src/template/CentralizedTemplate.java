@@ -106,7 +106,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
         // the plan method cannot execute more than timeout_plan milliseconds
         timeout_plan = ls.get(LogistSettings.TimeoutKey.PLAN);
 
-        this.p = 0.3;
+        this.p = 0.5;
         this.topology = topology;
         this.distribution = distribution;
         this.agent = agent;
@@ -154,7 +154,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
                 best = A;
             }
 
-            System.out.println(i + " " + A.total_cost() + " Best : " + best.total_cost());
+            System.out.println(i + " " + assignments.size() + " " + A.total_cost() + " Best : " + best.total_cost());
         }
 
         return best;
@@ -164,7 +164,9 @@ public class CentralizedTemplate implements CentralizedBehavior {
         if(assignments == null || assignments.isEmpty()){
             throw new IllegalArgumentException();
         }
-        assignments.sort(Comparator.comparingDouble(template.Assignment::total_cost));
+        return Collections.min(assignments, Comparator.comparingDouble(template.Assignment::total_cost));
+
+        /*System.out.println("END SORT");
 
         int index = 0;
         template.Assignment best = assignments.get(0);
@@ -176,7 +178,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
                 break;
         }
 
-        return assignments.get((int) Math.floor(Math.random()*index));
+        return assignments.get((int) Math.floor(Math.random()*index));*/
     }
 
     private Plan naivePlan(Vehicle vehicle, TaskSet tasks) {

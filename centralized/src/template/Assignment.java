@@ -1,10 +1,8 @@
 package template;
 
 import logist.simulation.Vehicle;
-import logist.task.Task;
 import logist.task.TaskSet;
 import logist.topology.Topology;
-import org.omg.SendingContext.RunTime;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 
 public class Assignment {
+    private static final int MAX_LENGTH = 101;
     private final HashMap<template.TaskState, template.TaskState> nextTask;
     private final HashMap<Vehicle, template.TaskState> nextTaskVehicle;
     private final HashMap<template.TaskState, Integer> time;
@@ -67,6 +66,10 @@ public class Assignment {
                     if (a != null) {
                         assignments.add(a);
                     }
+                }
+                if(length > MAX_LENGTH){
+                int rand =  (int) (length/15 * Math.random());
+                i += rand;
                 }
             }
         }
@@ -191,11 +194,8 @@ public class Assignment {
         TaskState pred = t1;
         TaskState t2 = new TaskState(STATE.DELIVER, t1.getTask());
 
-     //   System.out.println("ICI");
 
         if (t1.getState() == STATE.PICKUP) {
-    //        System.out.println("PICKUP");
-      //      System.out.println("TASK ID : " + t1.getTask().id);
             while (!nextTask_new.get(pred).equals(t2)) {
                 pred = nextTask_new.get(pred);
                 if (pred == null) {
@@ -203,12 +203,7 @@ public class Assignment {
                 }
             }
 
-     //       System.out.println("TASK ID DE : " + nextTask_new.get(pred).getTask().id);
-
-
             nextTask_new.replace(pred, nextTask_new.get(t2));
-            // vérifier le prééd etc
-            // et pour le changing task, autant faire "is legal move"
         } else {
             throw new RuntimeException();
         }
@@ -220,14 +215,13 @@ public class Assignment {
         nextTaskVehicle_new.replace(v2, t1);
 
         UpdateTime(time_new, nextTask_new, nextTaskVehicle_new, v1);
-        UpdateTime(time_new, nextTask_new, nextTaskVehicle_new, v2);
+        UpdateTime(time_new, nextTask_new, nextTaskVehicle_new, v2, t2);
 
         vehicle_new.replace(t1, v2);
         vehicle_new.replace(t2, v2);
 
         return new Assignment(nextTask_new, nextTaskVehicle_new, time_new, vehicle_new);
     }
-
     private void UpdateTime(HashMap<TaskState, Integer> time_new, HashMap<TaskState, TaskState> nextTask_new, HashMap<Vehicle, TaskState> nextTaskVehicle_new, Vehicle v1) {
         TaskState t1 = nextTaskVehicle_new.get(v1);
 
@@ -243,6 +237,24 @@ public class Assignment {
             } while (t2 != null);
         }
     }
+
+    private void UpdateTime(HashMap<TaskState, Integer> time_new, HashMap<TaskState, TaskState> nextTask_new, HashMap<Vehicle, TaskState> nextTaskVehicle_new, Vehicle v1, TaskState t2) {
+        TaskState t1 = nextTaskVehicle_new.get(v1);
+
+        if (t1 != null) {
+            time_new.replace(t1, 1);
+            time_new.replace(t2, 2);
+            TaskState t3;
+            do {
+                t3 = nextTask_new.get(t1);
+                if (t3 != null) {
+                    time_new.replace(t3, time_new.get(t1) + 2);
+                    t1 = t3;
+                }
+            } while (t3 != null);
+        }
+    }
+
 
     private double dist(TaskState Task1, TaskState Task2) {
         if (Task1 == null) {
