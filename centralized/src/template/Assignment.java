@@ -52,7 +52,7 @@ public class Assignment {
         }
 
         if(Math.random() < 0.1){
-            return assignments;
+           // return assignments;
         }
 
         int length = 0;
@@ -72,7 +72,7 @@ public class Assignment {
                     }
                 }
                 if(length > MAX_LENGTH){
-                int rand =  (int) (length/15 * Math.random());
+                int rand =  (int) (length/5 * Math.random());
                 i += rand;
                 }
             }

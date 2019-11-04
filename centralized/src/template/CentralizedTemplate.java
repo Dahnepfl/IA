@@ -52,7 +52,16 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
         int j = 0;
         for(int i = 0; i < task_list.size(); i++) {
-            int index_ve = (int) Math.floor(Math.random()*vehicles.size());
+      //      int index_ve = (int) Math.floor(Math.random()*vehicles.size());
+            int index_ve = 0;
+            double smallest_dist = Double.MAX_VALUE;
+            for(int k = 0; k < vehicles.size(); k++){
+                double dist = vehicles.get(k).getCurrentCity().distanceTo(task_list.get(i).pickupCity);
+                if(dist < smallest_dist){
+                    smallest_dist = dist;
+                    index_ve = k;
+                }
+            }
             Vehicle v = vehicles.get(index_ve);
 
             System.out.println("Add to v " + index_ve);
@@ -202,7 +211,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
     private template.Assignment findAssignment(List<Vehicle> vehicles, TaskSet tasks) {
         template.Assignment Aold = SelectInitialSolution(tasks, vehicles);
 
-        int i = 1000;
+        int i = 50000;
         template.Assignment best = Aold;
         while(i-- > 0){
             List<template.Assignment> assignments = Aold.chooseNeighbours(vehicles, tasks);
@@ -217,8 +226,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
             {
                 best = A;
             }
-
-            System.out.println(i + " " + assignments.size() + " " + A.total_cost() + " Best : " + best.total_cost());
+            if(i%150==0)
+                System.out.println(i + " " + assignments.size() + " " + A.total_cost() + " Best : " + best.total_cost());
         }
 
         return best;
