@@ -240,7 +240,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
             long time_end = System.currentTimeMillis();
             long duration = time_end - time_start;
-            if(duration + 3000 > this.timeout_plan){
+            if(duration + 5000 > this.timeout_plan){
                 break;
             }
 
