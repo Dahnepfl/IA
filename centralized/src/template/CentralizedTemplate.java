@@ -136,8 +136,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
     @Override
     public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
-        long time_start = System.currentTimeMillis();
-        
+
 //		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
 
         Assignment a = findAssignment(vehicles, tasks);
@@ -148,16 +147,15 @@ public class CentralizedTemplate implements CentralizedBehavior {
             plan.add(Plan.EMPTY);
         }
 
-        long time_end = System.currentTimeMillis();
-        long duration = time_end - time_start;
-        System.out.println("The plan was generated in " + duration + " milliseconds.");
 
         System.out.println(plan);
-        
+
         return plan;
     }
 
     private List<Plan> assignmentToPlan(Assignment a, List<Vehicle> vvv) {
+        long time_start = System.currentTimeMillis();
+
         HashMap<TaskState, Vehicle> vehicles = a.getVehicle();
         HashMap<TaskState, TaskState> next_tasks = a.getNextTask();
         HashMap<Vehicle, TaskState> next_tasks_v = a.getNextTaskVehicle();
@@ -198,6 +196,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
             plans.add(i, plan);
         }
 
+
         return plans;
     }
 
@@ -209,12 +208,14 @@ public class CentralizedTemplate implements CentralizedBehavior {
     }
 
     private template.Assignment findAssignment(List<Vehicle> vehicles, TaskSet tasks) {
+        long time_start = System.currentTimeMillis();
+
         template.Assignment Aold = SelectInitialSolution(tasks, vehicles);
 
-        int i = 50000;
+        int i = 0;
         template.Assignment best = Aold;
         int same = 0;
-        while(i-- > 0){
+        while(true){
             List<template.Assignment> assignments = Aold.chooseNeighbours(vehicles, tasks);
             template.Assignment A = LocalChoice(assignments);
             if(Math.random() < this.p){
@@ -233,9 +234,23 @@ public class CentralizedTemplate implements CentralizedBehavior {
                 Aold = assignments.get((int) Math.floor(Math.random()*assignments.size()));
             }
 
-            if(i%2==0)
-                System.out.println(i + " " + assignments.size() + " " + A.total_cost() + " Best : " + best.total_cost());
+            if(i%3==0)
+                System.out.println(i++ + " " + assignments.size() + " " + A.total_cost() + " Best : " + best.total_cost());
+
+
+            long time_end = System.currentTimeMillis();
+            long duration = time_end - time_start;
+            if(duration + 3000 > this.timeout_plan){
+                break;
+            }
+
+            i++;
         }
+
+        long time_end = System.currentTimeMillis();
+        long duration = time_end - time_start;
+
+        System.out.println("The plan was generated in " + duration + " milliseconds.");
 
         return best;
     }
