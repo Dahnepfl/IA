@@ -213,20 +213,27 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
         int i = 50000;
         template.Assignment best = Aold;
+        int same = 0;
         while(i-- > 0){
             List<template.Assignment> assignments = Aold.chooseNeighbours(vehicles, tasks);
             template.Assignment A = LocalChoice(assignments);
-            if(Math.random() > this.p){
-                Aold = assignments.get((int) Math.floor(Math.random()*assignments.size()));
-            } else {
+            if(Math.random() < this.p){
                 Aold = A;
             }
 
             if(A.total_cost() < best.total_cost())
             {
                 best = A;
+            } else{
+                same++;
             }
-            if(i%150==0)
+
+            if(same >= 10){
+                same = 0;
+                Aold = assignments.get((int) Math.floor(Math.random()*assignments.size()));
+            }
+
+            if(i%2==0)
                 System.out.println(i + " " + assignments.size() + " " + A.total_cost() + " Best : " + best.total_cost());
         }
 

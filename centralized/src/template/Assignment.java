@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Set;
 
 public class Assignment {
-    private static final int MAX_LENGTH = 101;
+    private static final int MAX_LENGTH = 150;
     private final HashMap<template.TaskState, template.TaskState> nextTask;
     private final HashMap<Vehicle, template.TaskState> nextTaskVehicle;
     private final HashMap<template.TaskState, Integer> time;
@@ -72,7 +72,7 @@ public class Assignment {
                     }
                 }
                 if(length > MAX_LENGTH){
-                int rand =  (int) (length/5 * Math.random());
+                int rand =  (int) (length/25 * Math.random());
                 i += rand;
                 }
             }
